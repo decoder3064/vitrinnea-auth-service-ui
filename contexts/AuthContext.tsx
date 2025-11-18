@@ -73,32 +73,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    // MOCK LOGIN - Replace with real API call to backend
-    // TODO: Connect to POST /auth/login endpoint
-    toast.success('Login successful! (Mock)');
-    router.push('/profile');
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   setLoading(true);
-    //   const response = await authApi.login(email, password);
+    try {
+      setLoading(true);
+      const response = await authApi.login(email, password);
 
-    //   if (response.success && response.data) {
-    //     setToken(response.data.access_token);
-    //     setUser(response.data.user);
-    //     setUserState(response.data.user);
-    //     toast.success('Login successful!');
-    //     router.push('/profile');
-    //   } else {
-    //     toast.error('Login failed. Please try again.');
-    //   }
-    // } catch (error: any) {
-    //   const errorMessage = error.message || 'Login failed. Please check your credentials.';
-    //   toast.error(errorMessage);
-    //   throw error;
-    // } finally {
-    //   setLoading(false);
-    // }
+      if (response.success && response.data) {
+        setToken(response.data.access_token);
+        setUser(response.data.user);
+        setUserState(response.data.user);
+        toast.success('Login successful!');
+        router.push('/profile');
+      } else {
+        toast.error('Login failed. Please try again.');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please check your credentials.';
+      toast.error(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
