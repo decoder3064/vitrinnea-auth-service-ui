@@ -45,60 +45,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Check if user is authenticated on mount
   useEffect(() => {
     // DISABLED FOR UI PREVIEW - Uncomment when connecting to real backend
-    // const initAuth = async () => {
-    //   const token = getToken();
-    //   const storedUser = getUser();
+    const initAuth = async () => {
+      const token = getToken();
+      const storedUser = getUser();
 
-    //   if (token && storedUser) {
-    //     setUserState(storedUser);
-    //     // Verify token is still valid
-    //     try {
-    //       const response = await authApi.me();
-    //       if (response.success) {
-    //         setUserState(response.data);
-    //         setUser(response.data);
-    //       } else {
-    //         clearAuth();
-    //         setUserState(null);
-    //       }
-    //     } catch (error) {
-    //       clearAuth();
-    //       setUserState(null);
-    //     }
-    //   }
-    //   setLoading(false);
-    // };
+      if (token && storedUser) {
+        setUserState(storedUser);
+        // Verify token is still valid
+        try {
+          const response = await authApi.me();
+          if (response.success) {
+            setUserState(response.data);
+            setUser(response.data);
+          } else {
+            clearAuth();
+            setUserState(null);
+          }
+        } catch (error) {
+          clearAuth();
+          setUserState(null);
+        }
+      }
+      setLoading(false);
+    };
 
-    // initAuth();
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // MOCK LOGIN - Replace with real API call to backend
-    // TODO: Connect to POST /auth/login endpoint
-    toast.success('Login successful! (Mock)');
-    router.push('/profile');
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   setLoading(true);
-    //   const response = await authApi.login(email, password);
+    try {
+      setLoading(true);
+      const response = await authApi.login(email, password);
 
-    //   if (response.success && response.data) {
-    //     setToken(response.data.access_token);
-    //     setUser(response.data.user);
-    //     setUserState(response.data.user);
-    //     toast.success('Login successful!');
-    //     router.push('/profile');
-    //   } else {
-    //     toast.error('Login failed. Please try again.');
-    //   }
-    // } catch (error: any) {
-    //   const errorMessage = error.message || 'Login failed. Please check your credentials.';
-    //   toast.error(errorMessage);
-    //   throw error;
-    // } finally {
-    //   setLoading(false);
-    // }
+      if (response.success && response.data) {
+        setToken(response.data.access_token);
+        setUser(response.data.user);
+        setUserState(response.data.user);
+        toast.success('Login successful!');
+        router.push('/profile');
+      } else {
+        toast.error('Login failed. Please try again.');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please check your credentials.';
+      toast.error(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
