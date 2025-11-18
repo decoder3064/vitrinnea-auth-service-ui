@@ -45,31 +45,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Check if user is authenticated on mount
   useEffect(() => {
     // DISABLED FOR UI PREVIEW - Uncomment when connecting to real backend
-    // const initAuth = async () => {
-    //   const token = getToken();
-    //   const storedUser = getUser();
+    const initAuth = async () => {
+      const token = getToken();
+      const storedUser = getUser();
 
-    //   if (token && storedUser) {
-    //     setUserState(storedUser);
-    //     // Verify token is still valid
-    //     try {
-    //       const response = await authApi.me();
-    //       if (response.success) {
-    //         setUserState(response.data);
-    //         setUser(response.data);
-    //       } else {
-    //         clearAuth();
-    //         setUserState(null);
-    //       }
-    //     } catch (error) {
-    //       clearAuth();
-    //       setUserState(null);
-    //     }
-    //   }
-    //   setLoading(false);
-    // };
+      if (token && storedUser) {
+        setUserState(storedUser);
+        // Verify token is still valid
+        try {
+          const response = await authApi.me();
+          if (response.success) {
+            setUserState(response.data);
+            setUser(response.data);
+          } else {
+            clearAuth();
+            setUserState(null);
+          }
+        } catch (error) {
+          clearAuth();
+          setUserState(null);
+        }
+      }
+      setLoading(false);
+    };
 
-    // initAuth();
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
