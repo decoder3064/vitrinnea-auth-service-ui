@@ -1,85 +1,90 @@
 # Vitrinnea Auth UI
 
-Next.js 14+ admin UI for Laravel JWT authentication microservice.
+Next.js 14+ admin UI for Laravel JWT authentication microservice with comprehensive user and group management.
 
-## Features
+## 📋 Prerequisites
 
-- 🔐 JWT Authentication with automatic token refresh
-- 👤 User Profile page with roles and permissions
-- 👥 User Management (CRUD operations)
-- 🔑 Role & Permission Management
-- 🛡️ Protected routes with role-based access control
-- 📱 Responsive design with Tailwind CSS
-- 🎨 Clean, professional UI
-- 🔔 Toast notifications for user feedback
+Before you begin, ensure you have:
+- **Node.js 18+** installed ([Download here](https://nodejs.org/))
+- **npm** or **yarn** package manager
+- **Laravel backend** running at `https://vitrinnea-auth.test/api`
+- **Git** for cloning the repository
 
-## Tech Stack
+## 🚀 Quick Start
 
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- Axios for API calls
-- React Hot Toast for notifications
+### 1. Clone the Repository
 
-## Getting Started
+```bash
+git clone https://github.com/decoder3064/vitrinnea-auth-service-ui.git
+cd vitrinnea-auth-service-ui
+```
 
-1. Install dependencies:
+### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
-2. Configure environment variables:
-   - Copy `.env.example` to `.env.local`
-   - Update `NEXT_PUBLIC_API_URL` with your backend API URL
+### 3. Configure Environment Variables
 
-3. Run the development server:
+Create a `.env.local` file in the root directory:
+
+```bash
+NEXT_PUBLIC_API_URL=https://vitrinnea-auth.test/api
+```
+
+**Important:** Update the URL to match your Laravel backend API endpoint.
+
+### 4. Run Development Server
+
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000)
+The application will be available at [http://localhost:3000](http://localhost:3000)
 
-## Project Structure
+### 5. Login
 
-```
-app/
-├── login/              # Login page
-├── profile/            # User profile page
-├── admin/              # Admin panel
-│   ├── layout.tsx      # Admin layout with sidebar
-│   ├── users/          # User management
-│   └── roles/          # Role management
-├── layout.tsx          # Root layout with AuthProvider
-└── page.tsx            # Home page (redirects)
+Use your Laravel backend credentials to log in. Only users with admin roles (`super_admin`, `admin_sv`, `admin_gt`) can access the admin panel.
 
-components/
-├── auth/
-│   └── ProtectedRoute.tsx    # Route protection wrapper
-└── layout/
-    ├── Navbar.tsx            # Top navigation
-    └── Sidebar.tsx           # Admin sidebar
+## 🏗️ Production Deployment
 
-contexts/
-└── AuthContext.tsx     # Auth state management
+### Build for Production
 
-lib/
-└── api.ts              # API client with interceptors
-
-types/
-├── auth.ts             # Auth-related types
-└── user.ts             # User-related types
+```bash
+npm run build
 ```
 
-## Authentication Flow
+### Start Production Server
 
-1. User logs in via `/login`
-2. JWT token stored in localStorage
-3. Token automatically added to all API requests via axios interceptor
-4. Token refresh on 401 errors
-5. Auto-redirect to login on auth failure
+```bash
+npm start
+```
 
-## User Roles
+The production server runs on port 3000 by default.
 
+### Deploy to Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import project in [Vercel](https://vercel.com/new)
+3. Add environment variable: `NEXT_PUBLIC_API_URL`
+4. Deploy
+
+## 📦 Features
+
+- ✅ **JWT Authentication** with automatic token refresh
+- ✅ **User Management** - Create, edit, activate/deactivate users
+- ✅ **Groups Management** - Custom organizational units with CRUD operations
+- ✅ **Role Assignment** - Pre-defined system roles (not editable)
+- ✅ **Permissions Display** - View assigned permissions per group (read-only)
+- ✅ **Advanced Filtering** - Search by name/email, filter by country and status
+- ✅ **Status Management** - Activate/deactivate users with visual badges
+- ✅ **Responsive Design** - Mobile-friendly UI with collapsible navigation
+- ✅ **Security Hardened** - XSS protection, input validation, secure headers
+
+## 🔑 User Roles
+
+System roles (assigned via backend):
 - `super_admin` - Full system access
 - `admin_sv` - Admin access (El Salvador)
 - `admin_gt` - Admin access (Guatemala)
@@ -88,64 +93,142 @@ types/
 - `operations` - Operations staff
 - `employee` - Regular employee
 
-## Admin Features
+## 👥 Admin Panel Access
 
-Only users with roles `super_admin`, `admin_sv`, or `admin_gt` can access:
+Users with these roles can access admin features:
+- `super_admin`
+- `admin_sv`
+- `admin_gt`
 
-- **User Management**: Create, edit, delete users and assign roles
-- **Role Management**: View roles and manage their permissions
+### Admin Features:
+1. **Users Page** (`/admin/users`)
+   - Create new users with role and groups
+   - Edit existing users
+   - Activate/deactivate users
+   - Filter by country (SV/GT), status (active/deactivated), search
+   - View user roles and assigned groups
 
-## API Endpoints
+2. **Groups Page** (`/admin/roles`)
+   - Create custom groups
+   - Edit group details (display name, description, active status)
+   - Delete groups
+   - View assigned permissions (read-only)
 
-Backend API should provide:
+## 🔄 Authentication Flow
 
+1. User navigates to `/login`
+2. Enters credentials (email & password)
+3. JWT token received and stored in localStorage
+4. Token automatically attached to all API requests
+5. Token auto-refreshes on 401 errors
+6. Auto-redirect to login if authentication fails
+
+## 📡 Backend API Integration
+
+The frontend expects these Laravel endpoints:
+
+### Authentication
 - `POST /auth/login` - User login
-- `GET /auth/me` - Get current user
-- `POST /auth/logout` - Logout
-- `POST /auth/refresh` - Refresh token
-- `GET /users` - List all users
-- `POST /users` - Create user
-- `PUT /users/:id` - Update user
-- `DELETE /users/:id` - Delete user
-- `GET /roles` - List all roles
-- `GET /permissions` - List all permissions
-- `POST /roles/:id/permissions` - Assign permissions to role
+- `GET /auth/me` - Get current user profile
+- `POST /auth/logout` - Logout user
+- `POST /auth/refresh` - Refresh JWT token
 
-## Development
+### User Management
+- `GET /admin/users` - List users (with pagination)
+- `GET /admin/users/:id` - Get single user
+- `POST /admin/users` - Create user
+- `PUT /admin/users/:id` - Update user
+- `DELETE /admin/users/:id` - Deactivate user
+- `POST /admin/users/:id/activate` - Activate user
 
-```bash
-# Run dev server
-npm run dev
+### Groups Management
+- `GET /admin/groups` - List all groups
+- `GET /admin/groups/:id` - Get group with permissions
+- `POST /admin/groups` - Create group
+- `PUT /admin/groups/:id` - Update group
+- `DELETE /admin/groups/:id` - Delete group
 
-# Build for production
-npm run build
+**Note:** Permissions are read-only. They cannot be assigned/removed through this UI.
 
-# Start production server
-npm start
+## 📁 Project Structure
 
-# Lint code
-npm run lint
+```
+app/
+├── login/              # Login page
+├── profile/            # User profile page
+├── admin/              # Admin panel
+│   ├── layout.tsx      # Admin layout with sidebar
+│   ├── users/          # User management (CRUD + filters)
+│   └── roles/          # Groups management (CRUD + permissions view)
+├── layout.tsx          # Root layout with AuthProvider
+└── page.tsx            # Home page (redirects to profile)
+
+components/
+├── auth/
+│   ├── AuthGuard.tsx         # Route protection wrapper
+│   └── ProtectedRoute.tsx    # Legacy route protection
+└── layout/
+    ├── Navbar.tsx            # Top navigation (responsive)
+    └── Sidebar.tsx           # Admin sidebar (collapsible on mobile)
+
+contexts/
+└── AuthContext.tsx     # Global auth state management
+
+lib/
+└── api.ts              # Axios API client with interceptors
+
+types/
+├── auth.ts             # Auth & Role types
+└── user.ts             # User types
 ```
 
-## Environment Variables
+## 🛠️ Available Scripts
 
-- `NEXT_PUBLIC_API_URL` - Backend API URL (required)
+```bash
+# Development
+npm run dev          # Start dev server with hot reload
 
-## Learn More
+# Production
+npm run build        # Build optimized production bundle
+npm start            # Run production server
 
-To learn more about Next.js:
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Learn Next.js](https://nextjs.org/learn)
+# Code Quality
+npm run lint         # Run ESLint
+npm audit            # Check for vulnerabilities
+```
 
-## License
+## 🔒 Security Features
+
+- XSS protection via input sanitization
+- Email regex validation
+- Password length requirements (min 8 chars)
+- Secure HTTP headers configured
+- CORS handling via Laravel backend
+- Token validation and automatic refresh
+- Error message sanitization (no backend details exposed)
+
+See `SECURITY.md` for detailed security documentation.
+
+## 🐛 Troubleshooting
+
+### "Failed to fetch users"
+- Verify `NEXT_PUBLIC_API_URL` is correct in `.env.local`
+- Check Laravel backend is running
+- Ensure CORS is configured correctly in Laravel
+
+### Login not working
+- Verify credentials are correct
+- Check Laravel backend `/auth/login` endpoint
+- Open browser console for detailed error messages
+
+### Admin panel not visible
+- Ensure your user has role: `super_admin`, `admin_sv`, or `admin_gt`
+- Check user permissions in Laravel backend
+
+## 📞 Support
+
+For issues or questions, contact the development team.
+
+## 📄 License
 
 Private - Vitrinnea Internal Use Only
-
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# vitrinnea-auth-service-ui
-# vitrinnea-auth-service-ui
