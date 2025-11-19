@@ -6,8 +6,10 @@ export interface User {
   email: string;
   user_type: string;
   country: string;
+  active: boolean; // User activation status
   roles: Role[];
   permissions: Permission[];
+  groups?: any[]; // Groups the user belongs to
   created_at?: string;
   updated_at?: string;
 }

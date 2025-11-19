@@ -1,37 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  // DISABLED FOR UI PREVIEW - Uncomment when connecting to real backend
-  // useEffect(() => {
-  //   if (isAuthenticated) {
-  //     router.push('/profile');
-  //   }
-  // }, [isAuthenticated, router]);
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
-    if (!email || !password) {
+    // Enhanced input validation
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    
+    if (!trimmedEmail || !trimmedPassword) {
+      return;
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return;
+    }
+
+    // Password length check
+    if (trimmedPassword.length < 6) {
       return;
     }
 
     setIsLoading(true);
     try {
-      await login(email, password);
+      await login(trimmedEmail, trimmedPassword);
     } catch (error) {
       // Error handling is done in AuthContext
-    } finally {
       setIsLoading(false);
     }
   };

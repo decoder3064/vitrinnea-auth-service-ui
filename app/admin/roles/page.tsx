@@ -10,8 +10,16 @@ export default function RolesPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [rolePermissions, setRolePermissions] = useState<number[]>([]);
+  const [editingGroup, setEditingGroup] = useState<Role | null>(null);
+  const [groupFormData, setGroupFormData] = useState({
+    name: '',
+    display_name: '',
+    description: '',
+    active: true,
+  });
 
   useEffect(() => {
     fetchRoles();
@@ -19,115 +27,102 @@ export default function RolesPage() {
   }, []);
 
   const fetchRoles = async () => {
-    // MOCK DATA - Replace with real API call to backend
-    // TODO: Connect to GET /roles endpoint
-    setRoles([
-      { id: 1, name: 'super_admin', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 2, name: 'admin_sv', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 3, name: 'admin_gt', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 4, name: 'warehouse_manager_sv', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 5, name: 'warehouse_manager_gt', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 6, name: 'operations', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 7, name: 'employee', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' }
-    ]);
-    setLoading(false);
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   const response = await roleApi.getAll();
-    //   if (response.success) {
-    //     setRoles(response.data);
-    //   }
-    // } catch (error: any) {
-    //   toast.error('Failed to fetch roles');
-    // } finally {
-    //   setLoading(false);
-    // }
+    try {
+      const response = await roleApi.getAll();
+      if (response.success) {
+        setRoles(response.data);
+      }
+    } catch (error: any) {
+      toast.error('Failed to fetch groups');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchPermissions = async () => {
-    // MOCK DATA - Replace with real API call to backend
-    // TODO: Connect to GET /permissions endpoint
-    setPermissions([
-      { id: 1, name: 'view-users', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 2, name: 'create-users', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 3, name: 'edit-users', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 4, name: 'delete-users', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 5, name: 'manage-roles', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 6, name: 'view-reports', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 7, name: 'manage-inventory', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 8, name: 'process-orders', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' }
-    ]);
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   const response = await permissionApi.getAll();
-    //   if (response.success) {
-    //     setPermissions(response.data);
-    //   }
-    // } catch (error) {
-    //   console.error('Failed to fetch permissions');
-    // }
+    try {
+      const response = await permissionApi.getAll();
+      if (response.success) {
+        setPermissions(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch permissions');
+    }
   };
 
-  const handleManagePermissions = async (role: Role) => {
+  const handleViewPermissions = async (role: Role) => {
     setSelectedRole(role);
     
-    // MOCK DATA - Replace with real API call to backend
-    // TODO: Connect to GET /roles/:id endpoint to fetch role permissions
-    // Mock: assign some permissions based on role
-    if (role.name === 'super_admin') {
-      setRolePermissions([1, 2, 3, 4, 5, 6, 7, 8]);
-    } else if (role.name.includes('admin')) {
-      setRolePermissions([1, 2, 3, 5, 6]);
-    } else if (role.name.includes('warehouse')) {
-      setRolePermissions([7, 8]);
-    } else {
-      setRolePermissions([1, 6]);
+    try {
+      const response = await roleApi.getById(role.id);
+      if (response.success && response.data.permissions) {
+        setRolePermissions(response.data.permissions.map((p: Permission) => p.id));
+      } else {
+        setRolePermissions([]);
+      }
+    } catch (error) {
+      setRolePermissions([]);
     }
     
-    setShowModal(true);
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   const response = await roleApi.getById(role.id);
-    //   if (response.success && response.data.permissions) {
-    //     setRolePermissions(response.data.permissions.map((p: Permission) => p.id));
-    //   } else {
-    //     setRolePermissions([]);
-    //   }
-    // } catch (error) {
-    //   setRolePermissions([]);
-    // }
+    setShowPermissionsModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateGroup = () => {
+    setEditingGroup(null);
+    setGroupFormData({
+      name: '',
+      display_name: '',
+      description: '',
+      active: true,
+    });
+    setShowGroupModal(true);
+  };
+
+  const handleEditGroup = (role: Role) => {
+    setEditingGroup(role);
+    setGroupFormData({
+      name: role.name,
+      display_name: role.display_name || '',
+      description: role.description || '',
+      active: role.active ?? true,
+    });
+    setShowGroupModal(true);
+  };
+
+  const handleDeleteGroup = async (groupId: number) => {
+    if (!confirm('Are you sure you want to delete this group?')) {
+      return;
+    }
+    
+    try {
+      await roleApi.delete(groupId);
+      toast.success('Group deleted successfully');
+      fetchRoles();
+    } catch (error: any) {
+      toast.error('Failed to delete group');
+    }
+  };
+
+  const handleGroupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedRole) return;
-    
-    // MOCK SAVE - Replace with real API call to backend
-    // TODO: Connect to POST /roles/:id/permissions endpoint
-    toast.success('Permissions updated successfully! (Mock)');
-    setShowModal(false);
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   await roleApi.assignPermissions(selectedRole.id, rolePermissions);
-    //   toast.success('Permissions updated successfully');
-    //   setShowModal(false);
-    //   fetchRoles();
-    // } catch (error: any) {
-    //   toast.error('Failed to update permissions');
-    // }
-  };
-
-  const togglePermission = (permissionId: number) => {
-    setRolePermissions(prev =>
-      prev.includes(permissionId)
-        ? prev.filter(id => id !== permissionId)
-        : [...prev, permissionId]
-    );
+    try {
+      if (editingGroup) {
+        await roleApi.update(editingGroup.id, {
+          display_name: groupFormData.display_name,
+          description: groupFormData.description,
+          active: groupFormData.active,
+        });
+        toast.success('Group updated successfully');
+      } else {
+        await roleApi.create(groupFormData);
+        toast.success('Group created successfully');
+      }
+      setShowGroupModal(false);
+      fetchRoles();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save group');
+    }
   };
 
   if (loading) {
@@ -135,7 +130,7 @@ export default function RolesPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading roles...</p>
+          <p className="mt-4 text-gray-600">Loading groups...</p>
         </div>
       </div>
     );
@@ -145,94 +140,183 @@ export default function RolesPage() {
     <div>
       <div className="sm:flex sm:items-center mb-6">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Roles & Permissions</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Groups & Permissions</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Manage roles and their assigned permissions.
+            Manage groups and their assigned permissions.
           </p>
+        </div>
+        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+          <button
+            type="button"
+            onClick={handleCreateGroup}
+            className="block rounded-md bg-blue-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+          >
+            Add Group
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {roles.map((role) => (
           <div key={role.id} className="bg-white shadow sm:rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-medium leading-6 text-gray-900">
-                    {role.name}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Guard: {role.guard_name}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleManagePermissions(role)}
-                  className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
-                >
-                  Manage Permissions
-                </button>
+              <div className="mb-4">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 break-words">
+                  {role.display_name || role.name}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 break-words">
+                  {role.description || `Group: ${role.guard_name}`}
+                </p>
               </div>
               
-              {/* Display current permissions if available */}
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
-                  Assigned Permissions:
-                </h4>
-                <div className="text-sm text-gray-500">
-                  Click "Manage Permissions" to view and edit
-                </div>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                <button
+                  onClick={() => handleViewPermissions(role)}
+                  className="flex-1 sm:min-w-[120px] rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+                >
+                  Permissions
+                </button>
+                <button
+                  onClick={() => handleEditGroup(role)}
+                  className="flex-1 sm:flex-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteGroup(role.id)}
+                  className="flex-1 sm:flex-none rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal */}
-      {showModal && selectedRole && (
+      {/* Permissions Modal (Read-Only) */}
+      {showPermissionsModal && selectedRole && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Manage Permissions for {selectedRole.name}
+                Permissions for {selectedRole.display_name || selectedRole.name}
               </h3>
+              <p className="mt-1 text-sm text-gray-500">View assigned permissions (read-only)</p>
             </div>
-            <form onSubmit={handleSubmit} className="px-6 py-4">
+            <div className="px-6 py-4">
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {permissions.map((permission) => (
-                  <label key={permission.id} className="flex items-start">
-                    <input
-                      type="checkbox"
-                      checked={rolePermissions.includes(permission.id)}
-                      onChange={() => togglePermission(permission.id)}
-                      className="h-4 w-4 mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="ml-3">
-                      <span className="text-sm font-medium text-gray-700">
-                        {permission.name}
-                      </span>
-                      {permission.guard_name && (
-                        <p className="text-xs text-gray-500">
-                          Guard: {permission.guard_name}
-                        </p>
-                      )}
+                {permissions.length === 0 ? (
+                  <p className="text-sm text-gray-500">No permissions available</p>
+                ) : permissions.filter(p => rolePermissions.includes(p.id)).length === 0 ? (
+                  <p className="text-sm text-gray-500">No permissions assigned to this group</p>
+                ) : (
+                  permissions.filter(permission => rolePermissions.includes(permission.id)).map((permission) => (
+                    <div key={permission.id} className="flex items-start p-3 bg-gray-50 rounded-md">
+                      <svg className="h-5 w-5 text-green-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <div className="ml-3">
+                        <span className="text-sm font-medium text-gray-900">
+                          {permission.name}
+                        </span>
+                        {permission.guard_name && (
+                          <p className="text-xs text-gray-500">
+                            Guard: {permission.guard_name}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </label>
-                ))}
+                  ))
+                )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
+              <div className="flex justify-end pt-4 border-t border-gray-200 mt-4">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowPermissionsModal(false)}
+                  className="w-full sm:w-auto rounded-md bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-500"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Group Modal */}
+      {showGroupModal && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">
+                {editingGroup ? 'Edit Group' : 'Create Group'}
+              </h3>
+            </div>
+            <form onSubmit={handleGroupSubmit} className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Name (Slug)</label>
+                <input
+                  type="text"
+                  required
+                  disabled={!!editingGroup}
+                  value={groupFormData.name}
+                  onChange={(e) => setGroupFormData({ ...groupFormData, name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100"
+                  placeholder="e.g., customer_service"
+                />
+                {editingGroup && (
+                  <p className="mt-1 text-xs text-gray-500">Name cannot be changed after creation</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Display Name</label>
+                <input
+                  type="text"
+                  required
+                  value={groupFormData.display_name}
+                  onChange={(e) => setGroupFormData({ ...groupFormData, display_name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  placeholder="e.g., Customer Service"
+                />
+              </div>
+
+                            <div>
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  value={groupFormData.description}
+                  onChange={(e) => setGroupFormData({ ...groupFormData, description: e.target.value })}
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  placeholder="Brief description of this group"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={groupFormData.active}
+                  onChange={(e) => setGroupFormData({ ...groupFormData, active: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label className="ml-2 text-sm text-gray-900">Active</label>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowGroupModal(false)}
+                  className="w-full sm:w-auto rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                  className="w-full sm:w-auto rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
                 >
-                  Update Permissions
+                  {editingGroup ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>

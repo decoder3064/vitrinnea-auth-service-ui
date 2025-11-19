@@ -2,24 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    // DISABLED FOR UI PREVIEW - Just redirect to profile
-    router.push('/profile');
-    
-    // Uncomment below when connecting to real backend:
-    // if (!loading) {
-    //   if (isAuthenticated) {
-    //     router.push('/profile');
-    //   } else {
-    //     router.push('/login');
-    //   }
-    // }
+    // Always redirect to profile, AuthGuard will handle auth check
+    router.replace('/profile');
   }, [router]);
 
   return (

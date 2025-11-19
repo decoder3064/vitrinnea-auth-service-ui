@@ -6,12 +6,17 @@ export interface LoginCredentials {
 
 export interface AuthResponse {
   success: boolean;
-  data: {
+  data?: {
     access_token: string;
     token_type: string;
     expires_in: number;
     user: User;
   };
+  // Backend also returns these directly at root level
+  access_token?: string;
+  token_type?: string;
+  expires_in?: number;
+  user?: User;
 }
 
 export interface User {
@@ -20,14 +25,18 @@ export interface User {
   email: string;
   user_type: string;
   country: string;
-  roles: Role[];
-  permissions: Permission[];
+  roles: Role[] | string[]; // Backend returns string[], we transform to Role[]
+  permissions: Permission[] | string[]; // Backend returns string[], we transform to Permission[]
+  groups?: string[]; // Backend also includes groups array
 }
 
 export interface Role {
   id: number;
   name: string;
+  display_name?: string; // Groups have display_name
+  description?: string; // Groups have description
   guard_name: string;
+  active?: boolean; // Groups have active flag
   created_at: string;
   updated_at: string;
   pivot?: {
@@ -52,7 +61,9 @@ export interface Permission {
 
 export interface MeResponse {
   success: boolean;
-  data: User;
+  data?: User;
+  // Backend also returns user directly at root level
+  user?: User;
 }
 
 export interface ApiResponse<T = any> {

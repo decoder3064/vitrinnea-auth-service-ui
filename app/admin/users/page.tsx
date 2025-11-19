@@ -8,10 +8,19 @@ import { Role } from '@/types/auth';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [groups, setGroups] = useState<Role[]>([]); // These are actually groups
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    country: '',
+    active: 'all',
+    search: '',
+  });
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,59 +28,67 @@ export default function UsersPage() {
     password_confirmation: '',
     user_type: '',
     country: '',
-    roles: [] as number[],
+    role: '', // Single role string
+    groups: [] as number[], // Multiple groups
   });
 
   useEffect(() => {
     fetchUsers();
-    fetchRoles();
+    fetchGroups();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [users, filters]);
+
   const fetchUsers = async () => {
-    // MOCK DATA - Replace with real API call to backend
-    // TODO: Connect to GET /users endpoint
-    setUsers([
-      { id: 1, name: 'Admin User', email: 'admin@vitrinnea.com', user_type: 'admin', country: 'SV', roles: [{ id: 1, name: 'super_admin', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' }], permissions: [] },
-      { id: 2, name: 'Employee User', email: 'employee@vitrinnea.com', user_type: 'employee', country: 'GT', roles: [{ id: 7, name: 'employee', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' }], permissions: [] },
-      { id: 3, name: 'Warehouse Manager', email: 'warehouse@vitrinnea.com', user_type: 'manager', country: 'SV', roles: [{ id: 4, name: 'warehouse_manager_sv', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' }], permissions: [] }
-    ]);
-    setLoading(false);
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   const response = await userApi.getAll();
-    //   if (response.success) {
-    //     setUsers(response.data);
-    //   }
-    // } catch (error: any) {
-    //   toast.error('Failed to fetch users');
-    // } finally {
-    //   setLoading(false);
-    // }
+    try {
+      const response = await userApi.getAll();
+      if (response.success) {
+        setUsers(response.data);
+      }
+    } catch (error: any) {
+      toast.error('Failed to fetch users');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fetchRoles = async () => {
-    // MOCK DATA - Replace with real API call to backend
-    // TODO: Connect to GET /roles endpoint
-    setRoles([
-      { id: 1, name: 'super_admin', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 2, name: 'admin_sv', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 3, name: 'admin_gt', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 4, name: 'warehouse_manager_sv', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 5, name: 'warehouse_manager_gt', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 6, name: 'operations', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' },
-      { id: 7, name: 'employee', guard_name: 'api', created_at: '2024-01-01', updated_at: '2024-01-01' }
-    ]);
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   const response = await roleApi.getAll();
-    //   if (response.success) {
-    //     setRoles(response.data);
-    //   }
-    // } catch (error) {
-    //   console.error('Failed to fetch roles');
-    // }
+  const applyFilters = () => {
+    let filtered = [...users];
+
+    // Filter by country
+    if (filters.country) {
+      filtered = filtered.filter(user => user.country === filters.country);
+    }
+
+    // Filter by active status
+    if (filters.active !== 'all') {
+      const isActive = filters.active === 'active';
+      filtered = filtered.filter(user => user.active === isActive);
+    }
+
+    // Filter by search (name or email)
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(user => 
+        user.name.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredUsers(filtered);
+  };
+
+  const fetchGroups = async () => {
+    try {
+      const response = await roleApi.getAll();
+      if (response.success) {
+        setGroups(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch groups');
+    }
   };
 
   const handleCreateUser = () => {
@@ -83,13 +100,22 @@ export default function UsersPage() {
       password_confirmation: '',
       user_type: '',
       country: '',
-      roles: [],
+      role: '',
+      groups: [],
     });
     setShowModal(true);
   };
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
+    // Extract first role name or use empty string
+    const userRole = user.roles && user.roles.length > 0
+      ? (typeof user.roles[0] === 'string' ? user.roles[0] : user.roles[0].name)
+      : '';
+    
+    // Extract group IDs from user.groups if available
+    const userGroups = user.groups?.map((g: any) => typeof g === 'number' ? g : g.id) || [];
+    
     setFormData({
       name: user.name,
       email: user.email,
@@ -97,7 +123,8 @@ export default function UsersPage() {
       password_confirmation: '',
       user_type: user.user_type,
       country: user.country,
-      roles: user.roles.map(r => r.id),
+      role: userRole,
+      groups: userGroups,
     });
     setShowModal(true);
   };
@@ -105,73 +132,91 @@ export default function UsersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // MOCK SAVE - Replace with real API calls to backend
-    // TODO: Connect to POST /users (create) and PUT /users/:id (update) endpoints
-    // TODO: Connect to POST /users/:id/roles endpoint for role assignment
-    toast.success(editingUser ? 'User updated successfully! (Mock)' : 'User created successfully! (Mock)');
-    setShowModal(false);
-    fetchUsers();
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   if (editingUser) {
-    //     const updateData: any = {
-    //       name: formData.name,
-    //       email: formData.email,
-    //       user_type: formData.user_type,
-    //       country: formData.country,
-    //     };
-    //     
-    //     if (formData.password) {
-    //       updateData.password = formData.password;
-    //       updateData.password_confirmation = formData.password_confirmation;
-    //     }
-    //     
-    //     await userApi.update(editingUser.id, updateData);
-    //     
-    //     if (formData.roles.length > 0) {
-    //       await userApi.assignRoles(editingUser.id, formData.roles);
-    //     }
-    //     
-    //     toast.success('User updated successfully');
-    //   } else {
-    //     await userApi.create(formData);
-    //     toast.success('User created successfully');
-    //   }
-    //   
-    //   setShowModal(false);
-    //   fetchUsers();
-    // } catch (error: any) {
-    //   toast.error(error.message || 'Failed to save user');
-    // }
+    try {
+      if (editingUser) {
+        const updateData: any = {
+          name: formData.name,
+          email: formData.email,
+          user_type: formData.user_type,
+          country: formData.country,
+          role: formData.role,
+        };
+        
+        if (formData.password) {
+          updateData.password = formData.password;
+          updateData.password_confirmation = formData.password_confirmation;
+        }
+        
+        await userApi.update(editingUser.id, updateData);
+        
+        // Assign groups separately
+        if (formData.groups.length > 0) {
+          await userApi.assignGroups(editingUser.id, formData.groups);
+        }
+        
+        toast.success('User updated successfully');
+      } else {
+        // For new users, backend expects role and groups in the create request
+        const createData = {
+          ...formData,
+          groups: formData.groups,
+          send_welcome_email: true,
+        };
+        await userApi.create(createData);
+        toast.success('User created successfully');
+      }
+      
+      setShowModal(false);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save user');
+    }
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!confirm('Are you sure you want to delete this user?')) {
+    if (!confirm('Are you sure you want to deactivate this user? They will no longer be able to log in.')) {
       return;
     }
     
-    // MOCK DELETE - Replace with real API call to backend
-    // TODO: Connect to DELETE /users/:id endpoint
-    toast.success('User deleted successfully! (Mock)');
-    fetchUsers();
-    
-    // Uncomment below when connecting to real backend:
-    // try {
-    //   await userApi.delete(userId);
-    //   toast.success('User deleted successfully');
-    //   fetchUsers();
-    // } catch (error: any) {
-    //   toast.error('Failed to delete user');
-    // }
+    try {
+      const response = await userApi.delete(userId);
+      if (response.success) {
+        toast.success(response.message || 'User deactivated successfully');
+        fetchUsers();
+      } else {
+        toast.error(response.message || 'Failed to deactivate user');
+      }
+    } catch (error: any) {
+      console.error('Delete user error:', error);
+      toast.error(error.message || 'Failed to deactivate user');
+    }
   };
 
-  const toggleRole = (roleId: number) => {
+  const handleActivateUser = async (userId: number) => {
+    if (!confirm('Are you sure you want to activate this user? They will be able to log in again.')) {
+      return;
+    }
+    
+    try {
+      const response = await userApi.activate(userId);
+      if (response.success) {
+        toast.success(response.message || 'User activated successfully');
+        fetchUsers();
+      } else {
+        toast.error(response.message || 'Failed to activate user');
+      }
+    } catch (error: any) {
+      console.error('Activate user error:', error);
+      toast.error(error.message || 'Failed to activate user');
+    }
+  };
+
+  const toggleGroup = (groupId: number) => {
     setFormData(prev => ({
       ...prev,
-      roles: prev.roles.includes(roleId)
-        ? prev.roles.filter(id => id !== roleId)
-        : [...prev.roles, roleId]
+      groups: prev.groups.includes(groupId)
+        ? prev.groups.filter(id => id !== groupId)
+        : [...prev.groups, groupId]
     }));
   };
 
@@ -192,7 +237,7 @@ export default function UsersPage() {
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
           <p className="mt-2 text-sm text-gray-700">
-            A list of all users in the system including their name, email, type, and roles.
+            A list of all users in the system including their name, email, role, and groups.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
@@ -206,27 +251,82 @@ export default function UsersPage() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={filters.search}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+          <select
+            value={filters.country}
+            onChange={(e) => setFilters({ ...filters, country: e.target.value })}
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+          >
+            <option value="">All Countries</option>
+            <option value="SV">SV</option>
+            <option value="GT">GT</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select
+            value={filters.active}
+            onChange={(e) => setFilters({ ...filters, active: e.target.value })}
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+          >
+            <option value="all">All Users</option>
+            <option value="active">Active</option>
+            <option value="inactive">Deactivated</option>
+          </select>
+        </div>
+
+        <div className="flex items-end">
+          <button
+            onClick={() => setFilters({ country: '', active: 'all', search: '' })}
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Clear Filters
+          </button>
+        </div>
+      </div>
+
       <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+          <div className="inline-block min-w-full py-2 align-middle px-4 sm:px-6 lg:px-8">
+            <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+                    <th className="py-3.5 pl-4 pr-3 text-left text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
                       Name
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-3 py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
                       Email
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-3 py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
                       Type
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-3 py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
                       Country
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Roles
+                    <th className="px-3 py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="px-3 py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      Role
+                    </th>
+                    <th className="px-3 py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      Groups
                     </th>
                     <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Actions</span>
@@ -234,30 +334,52 @@ export default function UsersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className={!user.active ? 'bg-gray-50 opacity-60' : ''}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-xs sm:text-sm font-medium text-gray-900">
                         {user.name}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <td className="whitespace-nowrap px-3 py-4 text-xs sm:text-sm text-gray-500">
                         {user.email}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <td className="whitespace-nowrap px-3 py-4 text-xs sm:text-sm text-gray-500">
                         {user.user_type}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <td className="whitespace-nowrap px-3 py-4 text-xs sm:text-sm text-gray-500">
                         {user.country}
                       </td>
-                      <td className="px-3 py-4 text-sm text-gray-500">
+                      <td className="whitespace-nowrap px-3 py-4 text-xs sm:text-sm">
+                        {user.active ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                            Deactivated
+                          </span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-xs sm:text-sm text-gray-500">
+                        <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+                          {user.roles && user.roles.length > 0
+                            ? (typeof user.roles[0] === 'string' ? user.roles[0] : user.roles[0].name)
+                            : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4 text-xs sm:text-sm text-gray-500">
                         <div className="flex flex-wrap gap-1">
-                          {user.roles.map((role) => (
-                            <span
-                              key={role.id}
-                              className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
-                            >
-                              {role.name}
-                            </span>
-                          ))}
+                          {user.groups && user.groups.length > 0 ? (
+                            user.groups.map((group: any, idx: number) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+                              >
+                                {typeof group === 'string' ? group : (group.display_name || group.name)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-400">No groups</span>
+                          )}
                         </div>
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
@@ -267,12 +389,21 @@ export default function UsersPage() {
                         >
                           Edit
                         </button>
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
+                        {user.active ? (
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleActivateUser(user.id)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Activate
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -286,7 +417,7 @@ export default function UsersPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
                 {editingUser ? 'Edit User' : 'Create User'}
@@ -300,7 +431,7 @@ export default function UsersPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 />
               </div>
 
@@ -311,7 +442,7 @@ export default function UsersPage() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 />
               </div>
 
@@ -324,7 +455,7 @@ export default function UsersPage() {
                   required={!editingUser}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 />
               </div>
 
@@ -335,7 +466,7 @@ export default function UsersPage() {
                   required={!editingUser || !!formData.password}
                   value={formData.password_confirmation}
                   onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 />
               </div>
 
@@ -346,7 +477,7 @@ export default function UsersPage() {
                   required
                   value={formData.user_type}
                   onChange={(e) => setFormData({ ...formData, user_type: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 />
               </div>
 
@@ -357,38 +488,57 @@ export default function UsersPage() {
                   required
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Roles</label>
+                <label className="block text-sm font-medium text-gray-700">Role</label>
+                <select
+                  required
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                >
+                  <option value="">Select a role</option>
+                  <option value="super_admin">Super Admin</option>
+                  <option value="admin_sv">Admin SV</option>
+                  <option value="admin_gt">Admin GT</option>
+                  <option value="warehouse_manager_sv">Warehouse Manager SV</option>
+                  <option value="warehouse_manager_gt">Warehouse Manager GT</option>
+                  <option value="operations">Operations</option>
+                  <option value="employee">Employee</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Groups</label>
                 <div className="space-y-2">
-                  {roles.map((role) => (
-                    <label key={role.id} className="flex items-center">
+                  {groups.map((group) => (
+                    <label key={group.id} className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={formData.roles.includes(role.id)}
-                        onChange={() => toggleRole(role.id)}
+                        checked={formData.groups.includes(group.id)}
+                        onChange={() => toggleGroup(group.id)}
                         className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="ml-2 text-sm text-gray-700">{role.name}</span>
+                      <span className="ml-2 text-base text-gray-900">{group.display_name || group.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="w-full sm:w-auto rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                  className="w-full sm:w-auto rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
                 >
                   {editingUser ? 'Update' : 'Create'}
                 </button>
