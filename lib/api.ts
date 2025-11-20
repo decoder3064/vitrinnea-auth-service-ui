@@ -32,8 +32,17 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized - but don't retry if it's already a refresh request
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // If this is a refresh endpoint failing, don't retry - just logout
+      if (originalRequest.url?.includes('/auth/refresh')) {
+        clearAuth();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(new Error('Session expired. Please login again.'));
+      }
+
       originalRequest._retry = true;
 
       try {

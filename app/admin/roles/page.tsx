@@ -2,17 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { roleApi, permissionApi } from '@/lib/api';
-import { Role, Permission } from '@/types/auth';
+import { roleApi } from '@/lib/api';
+import { Role } from '@/types/auth';
+
+interface RoleUser {
+  id: number;
+  name: string;
+  email: string;
+  country?: string;
+}
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showUsersModal, setShowUsersModal] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
-  const [rolePermissions, setRolePermissions] = useState<number[]>([]);
+  const [roleUsers, setRoleUsers] = useState<RoleUser[]>([]);
   const [editingGroup, setEditingGroup] = useState<Role | null>(null);
   const [groupFormData, setGroupFormData] = useState({
     name: '',
@@ -23,7 +29,6 @@ export default function RolesPage() {
 
   useEffect(() => {
     fetchRoles();
-    fetchPermissions();
   }, []);
 
   const fetchRoles = async () => {
@@ -33,38 +38,28 @@ export default function RolesPage() {
         setRoles(response.data);
       }
     } catch (error: any) {
-      toast.error('Failed to fetch groups');
+      toast.error('Failed to fetch roles');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPermissions = async () => {
-    try {
-      const response = await permissionApi.getAll();
-      if (response.success) {
-        setPermissions(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch permissions');
-    }
-  };
-
-  const handleViewPermissions = async (role: Role) => {
+  const handleViewUsers = async (role: Role) => {
     setSelectedRole(role);
     
     try {
       const response = await roleApi.getById(role.id);
-      if (response.success && response.data.permissions) {
-        setRolePermissions(response.data.permissions.map((p: Permission) => p.id));
+      if (response.success && response.data.users) {
+        setRoleUsers(response.data.users);
       } else {
-        setRolePermissions([]);
+        setRoleUsers([]);
       }
     } catch (error) {
-      setRolePermissions([]);
+      toast.error('Failed to fetch users for this role');
+      setRoleUsers([]);
     }
     
-    setShowPermissionsModal(true);
+    setShowUsersModal(true);
   };
 
   const handleCreateGroup = () => {
@@ -90,16 +85,16 @@ export default function RolesPage() {
   };
 
   const handleDeleteGroup = async (groupId: number) => {
-    if (!confirm('Are you sure you want to delete this group?')) {
+    if (!confirm('Are you sure you want to delete this role?')) {
       return;
     }
     
     try {
       await roleApi.delete(groupId);
-      toast.success('Group deleted successfully');
+      toast.success('Role deleted successfully');
       fetchRoles();
     } catch (error: any) {
-      toast.error('Failed to delete group');
+      toast.error('Failed to delete role');
     }
   };
 
@@ -113,15 +108,15 @@ export default function RolesPage() {
           description: groupFormData.description,
           active: groupFormData.active,
         });
-        toast.success('Group updated successfully');
+        toast.success('Role updated successfully');
       } else {
         await roleApi.create(groupFormData);
-        toast.success('Group created successfully');
+        toast.success('Role created successfully');
       }
       setShowGroupModal(false);
       fetchRoles();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save group');
+      toast.error(error.message || 'Failed to save role');
     }
   };
 
@@ -130,7 +125,7 @@ export default function RolesPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading groups...</p>
+          <p className="mt-4 text-gray-600">Loading roles...</p>
         </div>
       </div>
     );
@@ -140,9 +135,9 @@ export default function RolesPage() {
     <div>
       <div className="sm:flex sm:items-center mb-6">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Groups & Permissions</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Roles & Permissions</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Manage groups and their assigned permissions.
+            Manage roles and their assigned permissions.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
@@ -151,7 +146,7 @@ export default function RolesPage() {
             onClick={handleCreateGroup}
             className="block rounded-md bg-blue-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
           >
-            Add Group
+            Add Role
           </button>
         </div>
       </div>
@@ -165,16 +160,16 @@ export default function RolesPage() {
                   {role.display_name || role.name}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500 break-words">
-                  {role.description || `Group: ${role.guard_name}`}
+                  {role.description || `Role: ${role.guard_name}`}
                 </p>
               </div>
               
               <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                 <button
-                  onClick={() => handleViewPermissions(role)}
+                  onClick={() => handleViewUsers(role)}
                   className="flex-1 sm:min-w-[120px] rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
                 >
-                  Permissions
+                  View Users
                 </button>
                 <button
                   onClick={() => handleEditGroup(role)}
@@ -194,35 +189,38 @@ export default function RolesPage() {
         ))}
       </div>
 
-      {/* Permissions Modal (Read-Only) */}
-      {showPermissionsModal && selectedRole && (
+      {/* Users Modal (Read-Only) */}
+      {showUsersModal && selectedRole && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Permissions for {selectedRole.display_name || selectedRole.name}
+                Users in {selectedRole.display_name || selectedRole.name}
               </h3>
-              <p className="mt-1 text-sm text-gray-500">View assigned permissions (read-only)</p>
+              <p className="mt-1 text-sm text-gray-500">View all users assigned to this role (read-only)</p>
             </div>
             <div className="px-6 py-4">
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {permissions.length === 0 ? (
-                  <p className="text-sm text-gray-500">No permissions available</p>
-                ) : permissions.filter(p => rolePermissions.includes(p.id)).length === 0 ? (
-                  <p className="text-sm text-gray-500">No permissions assigned to this group</p>
+                {roleUsers.length === 0 ? (
+                  <p className="text-sm text-gray-500">No users assigned to this role</p>
                 ) : (
-                  permissions.filter(permission => rolePermissions.includes(permission.id)).map((permission) => (
-                    <div key={permission.id} className="flex items-start p-3 bg-gray-50 rounded-md">
-                      <svg className="h-5 w-5 text-green-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      <div className="ml-3">
-                        <span className="text-sm font-medium text-gray-900">
-                          {permission.name}
-                        </span>
-                        {permission.guard_name && (
-                          <p className="text-xs text-gray-500">
-                            Guard: {permission.guard_name}
+                  roleUsers.map((user) => (
+                    <div key={user.id} className="flex items-start p-3 bg-gray-50 rounded-md hover:bg-gray-100">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                      </div>
+                      <div className="ml-3 flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {user.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
+                        {user.country && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Country: {user.country}
                           </p>
                         )}
                       </div>
@@ -234,7 +232,7 @@ export default function RolesPage() {
               <div className="flex justify-end pt-4 border-t border-gray-200 mt-4">
                 <button
                   type="button"
-                  onClick={() => setShowPermissionsModal(false)}
+                  onClick={() => setShowUsersModal(false)}
                   className="w-full sm:w-auto rounded-md bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-500"
                 >
                   Close
@@ -251,7 +249,7 @@ export default function RolesPage() {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                {editingGroup ? 'Edit Group' : 'Create Group'}
+                {editingGroup ? 'Edit Role' : 'Create Role'}
               </h3>
             </div>
             <form onSubmit={handleGroupSubmit} className="px-6 py-4 space-y-4">
@@ -290,7 +288,7 @@ export default function RolesPage() {
                   onChange={(e) => setGroupFormData({ ...groupFormData, description: e.target.value })}
                   rows={3}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                  placeholder="Brief description of this group"
+                  placeholder="Brief description of this role"
                 />
               </div>
 

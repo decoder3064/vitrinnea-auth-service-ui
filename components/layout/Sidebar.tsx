@@ -19,7 +19,7 @@ export default function Sidebar() {
 
   const navigation = [
     { name: 'Users', href: '/admin/users', icon: '👥' },
-    { name: 'Groups', href: '/admin/roles', icon: '🔐' },
+    { name: 'Roles', href: '/admin/roles', icon: '🔐' },
   ];
 
   return (

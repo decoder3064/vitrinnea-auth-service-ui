@@ -62,7 +62,7 @@ export default function Navbar() {
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
                   >
-                    Groups
+                    Roles
                   </Link>
                 </>
               )}
@@ -161,7 +161,7 @@ export default function Navbar() {
                       : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800'
                   }`}
                 >
-                  Groups
+                  Roles
                 </Link>
               </>
             )}
