@@ -6,6 +6,7 @@ export interface User {
   email: string;
   user_type: string;
   country: string;
+  allowed_countries: string[]; // Multi-country support
   active: boolean; // User activation status
   roles: Role[];
   permissions: Permission[];
@@ -21,7 +22,10 @@ export interface CreateUserPayload {
   password_confirmation: string;
   user_type: string;
   country: string;
-  roles?: number[];
+  allowed_countries?: string[]; // Multi-country support
+  role?: string;
+  groups?: number[];
+  send_welcome_email?: boolean;
 }
 
 export interface UpdateUserPayload {
@@ -31,7 +35,10 @@ export interface UpdateUserPayload {
   password_confirmation?: string;
   user_type?: string;
   country?: string;
-  roles?: number[];
+  allowed_countries?: string[]; // Multi-country support
+  role?: string;
+  groups?: number[];
+  active?: boolean;
 }
 
 export interface UserListResponse {
@@ -53,4 +60,14 @@ export interface RoleListResponse {
 export interface PermissionListResponse {
   success: boolean;
   data: Permission[];
+}
+
+export interface Country {
+  code: string;
+  name: string;
+}
+
+export interface CountryListResponse {
+  success: boolean;
+  data: Country[];
 }

@@ -3,13 +3,21 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { userApi, roleApi } from '@/lib/api';
-import { User } from '@/types/user';
+import { User, Country } from '@/types/user';
 import { Role } from '@/types/auth';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Role[]>([]); // These are actually groups
+  const [countries, setCountries] = useState<Country[]>([
+    { code: 'SV', name: 'El Salvador' },
+    { code: 'GT', name: 'Guatemala' },
+    { code: 'CR', name: 'Costa Rica' },
+    { code: 'HN', name: 'Honduras' },
+    { code: 'NI', name: 'Nicaragua' },
+    { code: 'PA', name: 'Panamá' }
+  ]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -28,6 +36,7 @@ export default function UsersPage() {
     password_confirmation: '',
     user_type: '',
     country: '',
+    allowed_countries: [] as string[], // Multi-country support
     role: '', // Single role string
     groups: [] as number[], // Multiple groups
   });
@@ -35,6 +44,7 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
     fetchGroups();
+    fetchCountries();
   }, []);
 
   useEffect(() => {
@@ -91,6 +101,17 @@ export default function UsersPage() {
     }
   };
 
+  const fetchCountries = async () => {
+    try {
+      const response = await userApi.getAvailableCountries();
+      if (response.success && response.data) {
+        setCountries(response.data);
+      }
+    } catch (error) {
+      console.log('Using default country list');
+    }
+  };
+
   const handleCreateUser = () => {
     setEditingUser(null);
     setFormData({
@@ -100,6 +121,7 @@ export default function UsersPage() {
       password_confirmation: '',
       user_type: '',
       country: '',
+      allowed_countries: [],
       role: '',
       groups: [],
     });
@@ -123,6 +145,7 @@ export default function UsersPage() {
       password_confirmation: '',
       user_type: user.user_type,
       country: user.country,
+      allowed_countries: user.allowed_countries || [user.country],
       role: userRole,
       groups: userGroups,
     });
@@ -139,6 +162,7 @@ export default function UsersPage() {
           email: formData.email,
           user_type: formData.user_type,
           country: formData.country,
+          allowed_countries: formData.allowed_countries,
           role: formData.role,
         };
         
@@ -159,6 +183,7 @@ export default function UsersPage() {
         // For new users, backend expects role and groups in the create request
         const createData = {
           ...formData,
+          allowed_countries: formData.allowed_countries,
           groups: formData.groups,
           send_welcome_email: true,
         };
@@ -272,8 +297,9 @@ export default function UsersPage() {
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500"
           >
             <option value="">All Countries</option>
-            <option value="SV">SV</option>
-            <option value="GT">GT</option>
+            {countries.map((c) => (
+              <option key={c.code} value={c.code}>{c.code}</option>
+            ))}
           </select>
         </div>
 
@@ -347,6 +373,11 @@ export default function UsersPage() {
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-xs sm:text-sm text-gray-500">
                         {user.country}
+                        {user.allowed_countries && user.allowed_countries.length > 1 && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            Access: {user.allowed_countries.join(', ')}
+                          </div>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-xs sm:text-sm">
                         {user.active ? (
@@ -482,14 +513,44 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Country</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700">Primary Country</label>
+                <select
                   required
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                />
+                >
+                  <option value="">Select a country</option>
+                  {countries.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Allowed Countries (Multi-select)
+                </label>
+                <div className="border border-gray-300 rounded-md p-2 space-y-2 max-h-32 overflow-y-auto">
+                  {countries.map((c) => (
+                    <label key={c.code} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.allowed_countries.includes(c.code)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({ ...formData, allowed_countries: [...formData.allowed_countries, c.code] });
+                          } else {
+                            setFormData({ ...formData, allowed_countries: formData.allowed_countries.filter(code => code !== c.code) });
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-900">{c.name} ({c.code})</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Select all countries this user can access</p>
               </div>
 
               <div>

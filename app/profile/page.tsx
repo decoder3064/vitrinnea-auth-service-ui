@@ -44,6 +44,25 @@ export default function ProfilePage() {
                       <dt className="text-sm font-medium text-gray-500">Country</dt>
                       <dd className="mt-1 text-sm text-gray-900">{user.country}</dd>
                     </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Allowed Countries</dt>
+                      <dd className="mt-1">
+                        {user.allowed_countries && user.allowed_countries.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {user.allowed_countries.map((country) => (
+                              <span
+                                key={country}
+                                className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
+                              >
+                                {country}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-900">{user.country}</span>
+                        )}
+                      </dd>
+                    </div>
                   </dl>
                 </div>
               </div>

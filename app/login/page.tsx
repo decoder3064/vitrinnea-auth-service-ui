@@ -1,43 +1,66 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { userApi } from '@/lib/api';
+import { Country } from '@/types/user';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [country, setCountry] = useState('SV');
+  const [countries, setCountries] = useState<Country[]>([
+    { code: 'SV', name: 'El Salvador' },
+    { code: 'GT', name: 'Guatemala' },
+    { code: 'CR', name: 'Costa Rica' },
+    { code: 'HN', name: 'Honduras' },
+    { code: 'NI', name: 'Nicaragua' },
+    { code: 'PA', name: 'Panamá' }
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent any bubbling
+    
+    console.log('📝 Form submitted');
     
     // Enhanced input validation
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
     
     if (!trimmedEmail || !trimmedPassword) {
-      return;
+      console.log('❌ Validation failed: empty fields');
+      return false;
     }
 
     // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
-      return;
+      console.log('❌ Validation failed: invalid email format');
+      return false;
     }
 
     // Password length check
     if (trimmedPassword.length < 6) {
-      return;
+      console.log('❌ Validation failed: password too short');
+      return false;
     }
 
+    console.log('✅ Validation passed, calling login()');
     setIsLoading(true);
+    
     try {
-      await login(trimmedEmail, trimmedPassword);
+      await login(trimmedEmail, trimmedPassword, country);
+      console.log('✅ Login completed without throwing error');
     } catch (error) {
+      console.error('❌ Login error caught:', error);
       // Error handling is done in AuthContext
       setIsLoading(false);
     }
+    
+    return false; // Prevent default form behavior
   };
 
   return (
@@ -52,7 +75,26 @@ export default function LoginPage() {
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="-space-y-px rounded-md shadow-sm">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+                Country
+              </label>
+              <select
+                id="country"
+                name="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="relative block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                disabled={isLoading}
+              >
+                {countries.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label htmlFor="email-address" className="sr-only">
                 Email address
@@ -65,7 +107,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="relative block w-full rounded-t-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                 placeholder="Email address (@vitrinnea.com)"
                 disabled={isLoading}
               />
@@ -82,7 +124,7 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="relative block w-full rounded-b-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                 placeholder="Password"
                 disabled={isLoading}
               />

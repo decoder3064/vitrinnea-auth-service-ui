@@ -2,6 +2,8 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { AuthResponse, MeResponse, ApiResponse } from '@/types/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://vitrinnea-auth.test/api';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
+const API_SECRET = process.env.NEXT_PUBLIC_API_SECRET || '';
 
 // Create axios instance
 export const api = axios.create({
@@ -9,16 +11,25 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'X-API-Key': API_KEY,
+    'X-API-Secret': API_SECRET,
   },
 });
 
-// Request interceptor to add token to headers
+// Request interceptor to add token and country to headers
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add X-Country header to all requests
+    const country = getCountry();
+    if (country) {
+      config.headers['X-Country'] = country;
+    }
+    
     return config;
   },
   (error: AxiosError) => {
@@ -100,7 +111,21 @@ export const clearAuth = (): void => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('selected_country');
   }
+};
+
+export const setCountry = (country: string): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('selected_country', country.toUpperCase());
+  }
+};
+
+export const getCountry = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('selected_country');
+  }
+  return null;
 };
 
 export const setUser = (user: any): void => {
@@ -151,22 +176,41 @@ const transformUser = (user: any): any => {
 
 // Auth API methods
 export const authApi = {
-  login: async (email: string, password: string): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/login', { email, password });
-    // Backend returns: { success: true, access_token, token_type, expires_in, user }
-    // Transform to match frontend AuthResponse type
-    if (response.data.success && response.data.user) {
-      return {
-        success: true,
-        data: {
-          access_token: response.data.access_token,
-          token_type: response.data.token_type || 'bearer',
-          expires_in: response.data.expires_in || 3600,
-          user: transformUser(response.data.user)
-        }
-      } as AuthResponse;
+  login: async (email: string, password: string, country: string): Promise<AuthResponse> => {
+    console.log('🌐 API call: POST /auth/login', { email, country });
+    
+    try {
+      const response = await api.post<AuthResponse>(
+        '/auth/login', 
+        { email, password },
+        { headers: { 'X-Country': country.toUpperCase() } }
+      );
+      
+      console.log('✅ API response received:', response.data);
+      
+      // Backend returns: { success: true, access_token, token_type, expires_in, user }
+      // Transform to match frontend AuthResponse type
+      if (response.data.success && response.data.user) {
+        return {
+          success: true,
+          data: {
+            access_token: response.data.access_token,
+            token_type: response.data.token_type || 'bearer',
+            expires_in: response.data.expires_in || 3600,
+            user: transformUser(response.data.user)
+          }
+        } as AuthResponse;
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ API Error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      throw error;
     }
-    return response.data;
   },
 
   logout: async (): Promise<void> => {
@@ -285,6 +329,11 @@ export const userApi = {
 
   resetPassword: async (userId: number) => {
     const response = await api.post(`/admin/users/${userId}/reset-password`);
+    return response.data;
+  },
+
+  getAvailableCountries: async () => {
+    const response = await api.get('/admin/users/countries');
     return response.data;
   },
 };
